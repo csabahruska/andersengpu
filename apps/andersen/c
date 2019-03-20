@@ -1,0 +1,5 @@
+set -e -x
+
+#nvcc -c andersen.cu
+
+clang++-6.0 main.cpp gzstream.cpp andersen.o -lz -lcudart -o andersen
