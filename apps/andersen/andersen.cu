@@ -71,7 +71,7 @@ __constant__  uint* __nextVar__;
 
  /**
   * Table of indexes to the information inferred by HCD.
-  * Each entry is a pair (index, index + delta) that refers to __hcdTable__ 
+  * Each entry is a pair (index, index + delta) that refers to __hcdTable__
   */
 __constant__ uint* __hcdIndex__;
 __constant__ uint __numHcdIndex__;
@@ -188,9 +188,9 @@ __device__ inline uint getBlocksPerGrid(){
 __device__ void syncAllThreads() {
   __syncthreads();
   uint to = getBlocksPerGrid() - 1;
-  if (isFirstThreadOfBlock()) {      
+  if (isFirstThreadOfBlock()) {
     volatile uint* counter = &__counter__;
-    if (atomicInc((uint*) counter, to) < to) {       
+    if (atomicInc((uint*) counter, to) < to) {
       while (*counter); // spinning...
     }
   }
@@ -313,7 +313,7 @@ __constant__ uint* __offsetMask__;
  * Number of rows needed to represent the mask of ONE offset.
  * = ceil(numObjectVars / DST_PER_ELEMENT), since non-object pointers have size 1.
  */
-__constant__ uint __offsetMaskRowsPerOffset__; 
+__constant__ uint __offsetMaskRowsPerOffset__;
 
 __device__ inline uint __offsetMaskGet__(const uint base, const uint col, const uint offset) {
   return __offsetMask__[mul32((offset - 1) * __offsetMaskRowsPerOffset__ + base) + col];
@@ -370,7 +370,7 @@ __device__ inline uint mallocCurrDiffPts() {
 }
 
 __device__ inline uint mallocOther() {
-  __shared__ volatile uint _shared_[MAX_WARPS_PER_BLOCK]; 
+  __shared__ volatile uint _shared_[MAX_WARPS_PER_BLOCK];
   if (isFirstThreadOfWarp()) {
     _shared_[warpId] = atomicAdd(&__otherFreeList__, ELEMENT_WIDTH);
   }
@@ -397,7 +397,7 @@ __device__ inline uint mallocIn(uint rel) {
 /**
  * Get and increment the current worklist index
  * Granularity: warp
- * @param delta Number of elements to be retrieved at once 
+ * @param delta Number of elements to be retrieved at once
  * @return Worklist index 'i'. All the work items in the [i, i + delta) interval are guaranteed
  * to be assigned to the current warp.
  */
@@ -418,13 +418,13 @@ __device__ inline uint getAndIncrement(uint* counter, uint delta) {
 }
 
 /**
- * Lock a given variable 
+ * Lock a given variable
  * Granularity: warp
  * @param var Id of the variable
  * @return A non-zero value if the operation succeeded
  */
 __device__ inline uint lock(const uint var) {
-  return __any(isFirstThreadOfWarp() && (atomicCAS(__lock__ + var, UNLOCKED, LOCKED) 
+  return __any(isFirstThreadOfWarp() && (atomicCAS(__lock__ + var, UNLOCKED, LOCKED)
       == UNLOCKED));
 }
 
@@ -455,7 +455,7 @@ __device__ inline uint getRepRec(const uint var) {
   while (repRep != rep) {
     rep = repRep;
     repRep = __rep__[rep];
-  } 
+  }
   return rep;
 }
 
@@ -537,7 +537,7 @@ __device__ void blockSort(volatile uint* _shared_, uint to) {
   for (int i = to + id; i < size; i += getThreadsPerBlock()) {
     _shared_[i] = NIL;
   }
-  blockBitonicSort(_shared_, size);  
+  blockBitonicSort(_shared_, size);
   __syncthreads();
 }
 
@@ -706,7 +706,7 @@ __device__  void accumulate(const uint base, uint myBits, uint& numFrom, uint re
     nonEmpty &= (nonEmpty - 1);
     uint bits = getValAtThread(myBits, pos);
     uint numOnes = __popc(bits);
-    //cudaAssert(numFrom + numOnes > PRINT_BUFFER_SIZE); 
+    //cudaAssert(numFrom + numOnes > PRINT_BUFFER_SIZE);
     uint var = mul960(base) + mul32(pos) + threadWarpId;
     // PTS edges: we do not use representatives. In all the other relations we do.
     var = isBitActive(bits, threadWarpId) ? (rel > CURR_DIFF_PTS ? __rep__[var] : var) : NIL;
@@ -718,7 +718,7 @@ __device__  void accumulate(const uint base, uint myBits, uint& numFrom, uint re
   }
 }
 
-__device__ void printEdges(const uint src, const uint rel, const uint printEmptySets) { 
+__device__ void printEdges(const uint src, const uint rel, const uint printEmptySets) {
   if (isEmpty(src, rel) && !printEmptySets) {
     return;
   }
@@ -846,7 +846,7 @@ __global__ void __printGepEdges() {
   printGepEdges();
 }
 
-__device__ void printConstraints(uint* __constraints__, const uint numConstraints) { 
+__device__ void printConstraints(uint* __constraints__, const uint numConstraints) {
   volatile __shared__ uint _shared_[WARP_SIZE];
   for (int i = 0; i < numConstraints * 2; i += warpSz) {
     _shared_[threadWarpId] = __constraints__[i + threadWarpId];
@@ -895,7 +895,7 @@ __device__ int checkForErrors(uint var, uint rel) {
     }
     if (!first && base <= lastBase) {
       if (isFirstThreadOfWarp()) {
-        printf("ERROR: BASE(element) = %u <= BASE(prev(element)) = %u at %s of %u\n", base, 
+        printf("ERROR: BASE(element) = %u <= BASE(prev(element)) = %u at %s of %u\n", base,
             lastBase, getName(rel), var);
       }
       //printElementRec(getHeadIndex(var, rel));
@@ -934,7 +934,7 @@ __device__ uint hashCode(uint index) {
   while (1) {
     uint elementHash = base * (30 + threadWarpId) ^ bits;
     if (bits) {
-      myRet ^= elementHash;      
+      myRet ^= elementHash;
     }
     index = __graphGet__(index + NEXT);
     if (index == NIL) {
@@ -942,7 +942,7 @@ __device__ uint hashCode(uint index) {
     }
     bits = __graphGet__(index + threadWarpId);
     base = __graphGet__(index + BASE);
-  } 
+  }
   _shared_[threadWarpId] = myRet;
   if (threadWarpId < 14) {
     _shared_[threadWarpId] ^= _shared_[threadWarpId + warpSz / 2];
@@ -993,7 +993,7 @@ __device__ uint size(uint var, uint rel) {
   return _shared_[0];
 }
 
-__device__ void unionToCopyInv(const uint to, const uint fromIndex, uint* const _shared_, 
+__device__ void unionToCopyInv(const uint to, const uint fromIndex, uint* const _shared_,
     bool applyCopy = true) {
   uint toIndex = getCopyInvHeadIndex(to);
   if (fromIndex == toIndex) {
@@ -1029,7 +1029,7 @@ __device__ void unionToCopyInv(const uint to, const uint fromIndex, uint* const 
       toIndex = newVal;
       fromBits = __graphGet__(fromNext + threadWarpId);
       fromBase = __graphGet__(fromNext + BASE);
-      fromNext = __graphGet__(fromNext + NEXT);      
+      fromNext = __graphGet__(fromNext + NEXT);
     } else if (toBase == fromBase) {
       uint orBits = fromBits | toBits;
       uint diffs = __any(orBits != toBits && threadWarpId < NEXT);
@@ -1063,7 +1063,7 @@ __device__ void unionToCopyInv(const uint to, const uint fromIndex, uint* const 
       }
       fromBits = __graphGet__(fromNext + threadWarpId);
       fromBase = __graphGet__(fromNext + BASE);
-      fromNext = __graphGet__(fromNext + NEXT);      
+      fromNext = __graphGet__(fromNext + NEXT);
     } else { //toBase < fromBase
       if (toNext == NIL) {
         uint newNext = mallocOther();
@@ -1075,7 +1075,7 @@ __device__ void unionToCopyInv(const uint to, const uint fromIndex, uint* const 
         toIndex = toNext;
         toBits = __graphGet__(toNext + threadWarpId);
         toBase = __graphGet__(toIndex + BASE);
-        toNext = __graphGet__(toNext + NEXT);        
+        toNext = __graphGet__(toNext + NEXT);
       }
     }
   }
@@ -1085,9 +1085,9 @@ __device__ void unionToCopyInv(const uint to, const uint fromIndex, uint* const 
   }
 }
 
-__device__ void clone(uint toIndex, uint fromBits, uint fromNext, const uint toRel) {  
+__device__ void clone(uint toIndex, uint fromBits, uint fromNext, const uint toRel) {
   while (1) {
-    uint newIndex = fromNext == NIL ? NIL : mallocIn(toRel);    
+    uint newIndex = fromNext == NIL ? NIL : mallocIn(toRel);
     uint val = threadWarpId == NEXT ? newIndex : fromBits;
     __graphSet__(toIndex + threadWarpId, val);
     if (fromNext == NIL) {
@@ -1095,14 +1095,14 @@ __device__ void clone(uint toIndex, uint fromBits, uint fromNext, const uint toR
     }
     toIndex = newIndex;
     fromBits = __graphGet__(fromNext + threadWarpId);
-    fromNext = __graphGet__(fromNext + NEXT);        
-  } 
+    fromNext = __graphGet__(fromNext + NEXT);
+  }
 }
 
 // toRel = any non-static relationship
 __device__ void unionG2G(const uint to, const uint toRel, const uint fromIndex) {
   uint toIndex = getHeadIndex(to, toRel);
-  uint fromBits = __graphGet__(fromIndex + threadWarpId); 
+  uint fromBits = __graphGet__(fromIndex + threadWarpId);
   uint fromBase = __graphGet__(fromIndex + BASE);
   if (fromBase == NIL) {
     return;
@@ -1118,7 +1118,7 @@ __device__ void unionG2G(const uint to, const uint toRel, const uint fromIndex) 
   while (1) {
     if (toBase > fromBase) {
       uint newIndex = mallocIn(toRel);
-      __graphSet__(newIndex + threadWarpId, toBits);      
+      __graphSet__(newIndex + threadWarpId, toBits);
       uint val = threadWarpId == NEXT ? newIndex : fromBits;
       __graphSet__(toIndex + threadWarpId, val);
       // advance 'from'
@@ -1128,7 +1128,7 @@ __device__ void unionG2G(const uint to, const uint toRel, const uint fromIndex) 
       toIndex = newIndex;
       fromBits = __graphGet__(fromNext + threadWarpId);
       fromBase = __graphGet__(fromNext + BASE);
-      fromNext = __graphGet__(fromNext + NEXT);        
+      fromNext = __graphGet__(fromNext + NEXT);
     } else if (toBase == fromBase) {
       uint newToNext = (toNext == NIL && fromNext != NIL) ? mallocIn(toRel) : toNext;
       uint orBits = fromBits | toBits;
@@ -1142,11 +1142,11 @@ __device__ void unionG2G(const uint to, const uint toRel, const uint fromIndex) 
       }
       fromBits = __graphGet__(fromNext + threadWarpId);
       fromBase = __graphGet__(fromNext + BASE);
-      fromNext = __graphGet__(fromNext + NEXT);      
+      fromNext = __graphGet__(fromNext + NEXT);
       if (toNext == NIL) {
         clone(newToNext, fromBits, fromNext, toRel);
         return;
-      } 
+      }
       toIndex = newToNext;
       toBits = __graphGet__(toNext + threadWarpId);
       toBase = __graphGet__(toNext + BASE);
@@ -1157,13 +1157,13 @@ __device__ void unionG2G(const uint to, const uint toRel, const uint fromIndex) 
         __graphSet__(toIndex + NEXT, toNext);
         clone(toNext, fromBits, fromNext, toRel);
         return;
-      } 
+      }
       toIndex = toNext;
       toBits = __graphGet__(toNext + threadWarpId);
       toBase = __graphGet__(toNext + BASE);
-      toNext = __graphGet__(toNext + NEXT);      
+      toNext = __graphGet__(toNext + NEXT);
     }
-  } 
+  }
 }
 
 // WATCH OUT: ASSUMES fromRel==toRel
@@ -1221,7 +1221,7 @@ __device__  void unionG2GRecycling(const uint to, const uint toRel, uint fromInd
       toNext = __graphGet__(toIndex, NEXT);
     } else { // toBase > fromBase
       if (fromIndex == fromHeadIndex) {
-        fromIndex = mallocIn(toRel);      
+        fromIndex = mallocIn(toRel);
       }
       __graphSet__(fromIndex, threadWarpId, toBits);
       int val = threadWarpId == NEXT ? fromIndex : fromBits;
@@ -1238,7 +1238,7 @@ __device__  void unionG2GRecycling(const uint to, const uint toRel, uint fromInd
   } while (fromIndex != NIL);
 }
 
-__device__ uint addVirtualElement(uint index, const uint fromBase, const uint fromBits, 
+__device__ uint addVirtualElement(uint index, const uint fromBase, const uint fromBits,
     const uint toRel) {
   for (;;) {
     uint toBits = __graphGet__(index + threadWarpId);
@@ -1278,7 +1278,7 @@ __device__ uint addVirtualElement(uint index, const uint fromBase, const uint fr
   }
 }
 
-__device__ uint insert(const uint index, const uint var, const int rel) {  
+__device__ uint insert(const uint index, const uint var, const int rel) {
   uint base = BASE_OF(var);
   uint word = WORD_OF(var);
   uint bit = BIT_OF(var);
@@ -1289,7 +1289,7 @@ __device__ uint insert(const uint index, const uint var, const int rel) {
     myBits = base;
   } else if (threadWarpId == NEXT) {
     myBits = NIL;
-  }  
+  }
   return addVirtualElement(index, base, myBits, rel);
 }
 
@@ -1300,7 +1300,7 @@ __device__ inline uint resetWorklistIndex() {
     __worklistIndex0__ = 0;
     __counter__ = 0;
     return 1;
-  }  
+  }
   return 0;
 }
 
@@ -1315,21 +1315,21 @@ __global__ void addEdges(uint* __key__, uint* __keyAux__, uint* __val__, const u
     }
     uint index  = getHeadIndex(src, rel);
     uint startIndex = __keyAux__[i];
-    uint end = __keyAux__[i + 1]; 
+    uint end = __keyAux__[i + 1];
     uint start = roundToPrevMultipleOf(startIndex, warpSz); // to ensure alignment
     for (int j = start; j < end; j += warpSz) {
       uint myIndex = j + threadWarpId;
-      _shared_[threadWarpId] = myIndex < end ? __val__[myIndex] : NIL; 
+      _shared_[threadWarpId] = myIndex < end ? __val__[myIndex] : NIL;
       uint startK = max(((int) startIndex) - j, 0);
-      uint endK = min(end - j, warpSz);      
+      uint endK = min(end - j, warpSz);
       for (int k = startK; k < endK; k++) {
         uint dst = _shared_[k];
         index = insert(index, dst, rel);
-      }      
-    }   
+      }
+    }
     i = getAndIncrement(1);
   }
-  resetWorklistIndex();  
+  resetWorklistIndex();
 }
 
 template<uint toRel, uint fromRel>
@@ -1338,7 +1338,7 @@ __device__  inline void unionAll(const uint to, uint* const _shared_, uint numFr
     numFrom = removeDuplicates(_shared_, numFrom);
   }
   for (int i = 0; i < numFrom; i++) {
-    uint fromIndex = _shared_[i];     
+    uint fromIndex = _shared_[i];
     if (fromRel != CURR_DIFF_PTS) {
       fromIndex = getHeadIndex(fromIndex, fromRel);
     }
@@ -1351,7 +1351,7 @@ __device__  inline void unionAll(const uint to, uint* const _shared_, uint numFr
 }
 
 template<uint toRel, uint fromRel>
-__device__  void map(uint to, const uint base, const uint myBits, uint* const _shared_, 
+__device__  void map(uint to, const uint base, const uint myBits, uint* const _shared_,
     uint& numFrom) {
   uint nonEmpty = __ballot(myBits) & LT_BASE;
   const uint threadMask = 1 << threadWarpId;
@@ -1370,14 +1370,14 @@ __device__  void map(uint to, const uint base, const uint myBits, uint* const _s
       if (numFrom + numOnes > DECODE_VECTOR_SIZE) {
         if (toRel == STORE) {
           insertAll(to, _shared_, numFrom, false);
-        } else {                
-          unionAll<toRel, fromRel>(to, _shared_, numFrom, false); 
+        } else {
+          unionAll<toRel, fromRel>(to, _shared_, numFrom, false);
         }
         numFrom = 0;
       }
     }
     pos = numFrom + __popc(bits & myMask);
-    if (bitActive) {      
+    if (bitActive) {
       _shared_[pos] = (fromRel == CURR_DIFF_PTS) ? __currPtsHead__[var] : var;
     }
     numFrom += numOnes;
@@ -1397,7 +1397,7 @@ __device__ void apply(const uint src, uint* const _shared_) {
     index = __graphGet__(index + NEXT);
     if (secondRel == CURR_DIFF_PTS) {
       myBits &= __diffPtsMaskGet__(base, threadWarpId);
-    } 
+    }
     map<thirdRel, secondRel>(src, base, myBits, _shared_, numFrom);
   } while (index != NIL);
   if (numFrom) {
@@ -1416,7 +1416,7 @@ __device__ void insertAll(const uint src, uint* const _shared_, uint numFrom, co
     // TODO: we need to make sure that (next + threadWarpId < MAX_HASH_SIZE)
     if (threadWarpId < size) {
       __key__[next + threadWarpId] = _shared_[i + threadWarpId]; // at most 2 transactions
-      __val__[next + threadWarpId] = storeIndex;    
+      __val__[next + threadWarpId] = storeIndex;
     }
   }
 }
@@ -1461,18 +1461,18 @@ __global__ void copyInv_loadInv_store2storeInv() {
   }
   if (resetWorklistIndex()) {
     __key__[__numKeysCounter__] = NIL;
-    __val__[__numKeysCounter__] = NIL;        
+    __val__[__numKeysCounter__] = NIL;
     __numKeys__ = __numKeysCounter__ + 1;
     __numKeysCounter__ = 0;
     __worklistIndex1__ = 0;
-  }  
+  }
 }
 
 __device__ void warpStoreInv(const uint i, uint* const _pending_, uint* _numPending_) {
   uint src = __key__[i];
   uint startIndex = __keyAux__[i];
-  uint end = __keyAux__[i + 1]; 
-  if (end - startIndex > WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) * 4) { 
+  uint end = __keyAux__[i + 1];
+  if (end - startIndex > WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) * 4) {
     // too big for a single warp => add to pending, so the whole block will process this variable
     if (isFirstThreadOfWarp()) {
       uint where = 3 * atomicAdd(_numPending_, 1);
@@ -1482,25 +1482,25 @@ __device__ void warpStoreInv(const uint i, uint* const _pending_, uint* _numPend
     }
     return;
   }
-  uint* const _shared_ = _pending_ + WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) * 3 + 
+  uint* const _shared_ = _pending_ + WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) * 3 +
       warpId * (WARP_SIZE + DECODE_VECTOR_SIZE + 1);
   _shared_[WARP_SIZE] = NIL;
   uint start = roundToPrevMultipleOf(startIndex, warpSz); // to ensure alignment
   for (int j = start; j < end; j += warpSz) {
     uint myIndex = j + threadWarpId;
-    _shared_[threadWarpId] = myIndex < end ? __val__[myIndex] : NIL; 
+    _shared_[threadWarpId] = myIndex < end ? __val__[myIndex] : NIL;
     uint startK = max(((int) startIndex) - j, 0);
-    uint endK = min(end - j, warpSz);      
+    uint endK = min(end - j, warpSz);
     for (int k = startK; k < endK; k++) {
       uint fromIndex = _shared_[k];
-      unionToCopyInv(src, fromIndex, _shared_ + 1 + WARP_SIZE); 
-    }      
+      unionToCopyInv(src, fromIndex, _shared_ + 1 + WARP_SIZE);
+    }
   }
 }
 
-__device__ void blockStoreInv(uint src, uint* const _dummyVars_, volatile uint* _warpInfo_, 
+__device__ void blockStoreInv(uint src, uint* const _dummyVars_, volatile uint* _warpInfo_,
     uint& _numPending_) {
-  uint* _shared_ = _dummyVars_ + WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) * 4 + 
+  uint* _shared_ = _dummyVars_ + WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) * 4 +
       warpId * (WARP_SIZE + DECODE_VECTOR_SIZE + 1);
   __shared__ uint _counter_, _start_, _end_;
 
@@ -1509,26 +1509,26 @@ __device__ void blockStoreInv(uint src, uint* const _dummyVars_, volatile uint* 
   __syncthreads();
   for (int i = 0; i < _numPending_; i++) {
     if (isFirstWarpOfBlock()) {
-      uint* pending = _dummyVars_ + WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK);    
-      src =     pending[3 * i]; 
+      uint* pending = _dummyVars_ + WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK);
+      src =     pending[3 * i];
       _start_ = pending[3 * i + 1];
       _end_ =   pending[3 * i + 2];
-      _counter_ = _start_; 
+      _counter_ = _start_;
     }
     __syncthreads();
     if (isFirstThreadOfWarp()) {
-      _warpInfo_[warpId] = atomicAdd(&_counter_, 1);      
+      _warpInfo_[warpId] = atomicAdd(&_counter_, 1);
     }
     uint j = _warpInfo_[warpId];
-    while (j < _end_) {      
+    while (j < _end_) {
       uint fromIndex = __val__[j];
-      unionToCopyInv(src, fromIndex, _shared_, isFirstWarpOfBlock());         
+      unionToCopyInv(src, fromIndex, _shared_, isFirstWarpOfBlock());
       if (isFirstThreadOfWarp()) {
-        _warpInfo_[warpId] = atomicAdd(&_counter_, 1);      
+        _warpInfo_[warpId] = atomicAdd(&_counter_, 1);
       }
       j = _warpInfo_[warpId];
     }
-    __syncthreads(); 
+    __syncthreads();
     if (isFirstWarpOfBlock()) {
       for (int i = 1; i < WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK); i++) {
         uint var2 = _dummyVars_[i];
@@ -1539,7 +1539,7 @@ __device__ void blockStoreInv(uint src, uint* const _dummyVars_, volatile uint* 
     if (!isFirstWarpOfBlock()) { //reset fields so updateDiffPts doesn't work on dummy variables
       uint index = getHeadIndex(src, COPY_INV);
       __graphSet__(index, threadWarpId, NIL);
-    }         
+    }
   }
   if (isFirstWarpOfBlock()) {
     _numPending_ = 0;
@@ -1548,13 +1548,13 @@ __device__ void blockStoreInv(uint src, uint* const _dummyVars_, volatile uint* 
 }
 
 __global__ void storeInv() {
-  __shared__ uint _sh_[WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) * 
+  __shared__ uint _sh_[WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) *
       (5 + WARP_SIZE + DECODE_VECTOR_SIZE + 1)];
   __shared__ volatile uint* _warpInfo_;
   __shared__ volatile uint _warpsWorking_;
   __shared__ uint* _dummyVars_;
   __shared__ uint _numPending_, _to_;
-  
+
   if (isFirstWarpOfBlock()) {
     _to_ = __numKeys__ - 1; // because the last one is NIL
     _dummyVars_ = _sh_ + WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK);
@@ -1564,20 +1564,20 @@ __global__ void storeInv() {
     _warpInfo_ = _sh_;
     _numPending_ = 0;
     _warpsWorking_ = WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK);
-  } 
+  }
   __syncthreads();
   uint counter, src;
   if (!isFirstWarpOfBlock()) {
-    src = _dummyVars_[warpId];    
+    src = _dummyVars_[warpId];
   }
   if (isFirstThreadOfWarp()) {
     uint next = atomicAdd(&__worklistIndex0__, 1);
     if (next >= _to_) {
       atomicSub((uint*) &_warpsWorking_, 1);
     }
-    _warpInfo_[warpId] = next;      
+    _warpInfo_[warpId] = next;
   }
-  counter = _warpInfo_[warpId]; 
+  counter = _warpInfo_[warpId];
   while (_warpsWorking_) {
     if (counter < _to_) {
       warpStoreInv(counter, _sh_ + WARPS_PER_BLOCK(STORE_INV_THREADS_PER_BLOCK) * 2, &_numPending_);
@@ -1592,12 +1592,12 @@ __global__ void storeInv() {
         if (next >= _to_) {
           atomicSub((uint*) &_warpsWorking_, 1);
         }
-        _warpInfo_[warpId] = next;      
+        _warpInfo_[warpId] = next;
       }
-      counter = _warpInfo_[warpId]; 
+      counter = _warpInfo_[warpId];
     }
   }
-  resetWorklistIndex();  
+  resetWorklistIndex();
 }
 
 __device__ void shift(const uint base, const uint bits, const uint offset,
@@ -1660,10 +1660,10 @@ __global__ void gepInv() {
   }
   if (resetWorklistIndex()) {
     __done__ = true;
-  }  
+  }
 }
 
-__device__ void cloneAndLink(const uint var, const uint ptsIndex, uint& currDiffPtsIndex, 
+__device__ void cloneAndLink(const uint var, const uint ptsIndex, uint& currDiffPtsIndex,
     const uint diffPtsBits, const uint diffPtsNext) {
   clone(ptsIndex, diffPtsBits, diffPtsNext, PTS);
   if (currDiffPtsIndex != NIL) {
@@ -1671,19 +1671,19 @@ __device__ void cloneAndLink(const uint var, const uint ptsIndex, uint& currDiff
   } else {
     currDiffPtsIndex = getCurrDiffPtsHeadIndex(var);
     uint ptsBits = __graphGet__(ptsIndex + threadWarpId);
-    __graphSet__(currDiffPtsIndex + threadWarpId, ptsBits);        
-  }  
+    __graphSet__(currDiffPtsIndex + threadWarpId, ptsBits);
+  }
 }
 
 /**
  * Update the current, next and total PTS sets of a variable. In the last iteration of the main
  * loop, points-to edges have been added to NEXT_DIFF_PTS. However, many of them might already be
- * present in PTS. The purpose of this function is to update PTS as PTS U NEXT_DIFF_PTS, and set 
+ * present in PTS. The purpose of this function is to update PTS as PTS U NEXT_DIFF_PTS, and set
  * CURR_DIFF_PTS as the difference between the old and new PTS for the given variable.
- *  
+ *
  * @param var ID of the variable
  * @return true if new pts edges have been added to this variable
- */ 
+ */
 __device__ bool updatePtsAndDiffPts(const uint var) {
   const uint diffPtsHeadIndex = getNextDiffPtsHeadIndex(var);
   uint diffPtsBits = __graphGet__(diffPtsHeadIndex + threadWarpId);
@@ -1696,17 +1696,17 @@ __device__ bool updatePtsAndDiffPts(const uint var) {
   uint ptsIndex = getPtsHeadIndex(var);
   uint ptsBits = __graphGet__(ptsIndex + threadWarpId);
   uint ptsBase = __graphGet__(ptsIndex + BASE);
-  if (ptsBase == NIL) { 
+  if (ptsBase == NIL) {
     //we pass ptsBase instead of NIL because it's also NIL but it can be modified
     cloneAndLink(var, ptsIndex, ptsBase, diffPtsBits, diffPtsNext);
-    return true;    
-  }      
+    return true;
+  }
   uint ptsNext = __graphGet__(ptsIndex + NEXT);
   uint currDiffPtsIndex = NIL;
-  while (1)  {   
+  while (1)  {
     if (ptsBase > diffPtsBase) {
       uint newIndex = mallocPts();
-      __graphSet__(newIndex + threadWarpId, ptsBits);        
+      __graphSet__(newIndex + threadWarpId, ptsBits);
       uint val = threadWarpId == NEXT ? newIndex : diffPtsBits;
       __graphSet__(ptsIndex + threadWarpId, val);
       ptsIndex = newIndex;
@@ -1722,14 +1722,14 @@ __device__ bool updatePtsAndDiffPts(const uint var) {
       }
       currDiffPtsIndex = newIndex;
       diffPtsBits = __graphGet__(diffPtsNext + threadWarpId);
-      diffPtsBase = __graphGet__(diffPtsNext + BASE);      
-      diffPtsNext = __graphGet__(diffPtsNext + NEXT);      
-    } else if (ptsBase == diffPtsBase) {      
+      diffPtsBase = __graphGet__(diffPtsNext + BASE);
+      diffPtsNext = __graphGet__(diffPtsNext + NEXT);
+    } else if (ptsBase == diffPtsBase) {
       uint newPtsNext = (ptsNext == NIL && diffPtsNext != NIL) ? mallocPts() : ptsNext;
       uint orBits = threadWarpId == NEXT ? newPtsNext : ptsBits | diffPtsBits;
       uint ballot = __ballot(orBits != ptsBits);
       if (ballot) {
-        __graphSet__(ptsIndex + threadWarpId, orBits);          
+        __graphSet__(ptsIndex + threadWarpId, orBits);
         if (ballot & LT_BASE) {
           // update CURR_DIFF_PTS
           orBits = diffPtsBits & ~ptsBits;
@@ -1753,16 +1753,16 @@ __device__ bool updatePtsAndDiffPts(const uint var) {
         return (currDiffPtsIndex != NIL);
       }
       diffPtsBits = __graphGet__(diffPtsNext + threadWarpId);
-      diffPtsBase = __graphGet__(diffPtsNext + BASE);      
-      diffPtsNext = __graphGet__(diffPtsNext + NEXT);      
+      diffPtsBase = __graphGet__(diffPtsNext + BASE);
+      diffPtsNext = __graphGet__(diffPtsNext + NEXT);
       if (ptsNext == NIL) {
         cloneAndLink(var, newPtsNext, currDiffPtsIndex, diffPtsBits, diffPtsNext);
-        return true;    
-      } 
+        return true;
+      }
       ptsIndex = ptsNext;
       ptsBits = __graphGet__(ptsIndex + threadWarpId);
       ptsBase = __graphGet__(ptsIndex + BASE);
-      ptsNext = __graphGet__(ptsIndex + NEXT);         
+      ptsNext = __graphGet__(ptsIndex + NEXT);
     } else { // ptsBase > diffPtsBase
       if (ptsNext == NIL) {
         uint newPtsIndex = mallocPts();
@@ -1773,8 +1773,8 @@ __device__ bool updatePtsAndDiffPts(const uint var) {
       ptsIndex = ptsNext;
       ptsBits = __graphGet__(ptsIndex + threadWarpId);
       ptsBase = __graphGet__(ptsIndex + BASE);
-      ptsNext = __graphGet__(ptsIndex + NEXT);        
-    } 
+      ptsNext = __graphGet__(ptsIndex + NEXT);
+    }
   }
 }
 
@@ -1782,16 +1782,16 @@ __global__ void updatePtsInformation() {
   bool newWork = false;
   const uint numVars = __numVars__;
   const uint CHUNK_SIZE = 12;
-  //ulongint start = recordStartTime();  
+  //ulongint start = recordStartTime();
   int i = getAndIncrement(CHUNK_SIZE);
-  while (i < numVars) {    
+  while (i < numVars) {
     for (int var = i; var < min(i + CHUNK_SIZE, numVars); var++) {
       bool newStuff = updatePtsAndDiffPts(var);
       newWork |= newStuff;
       if (!newStuff) {
         const uint currPtsHeadIndex = getCurrDiffPtsHeadIndex(var);
-        __graphSet__(currPtsHeadIndex + threadWarpId, NIL);        
-      }    
+        __graphSet__(currPtsHeadIndex + threadWarpId, NIL);
+      }
     }
     i = getAndIncrement(CHUNK_SIZE);
   }
@@ -1800,7 +1800,7 @@ __global__ void updatePtsInformation() {
   }
 //  if (isFirstThreadOfWarp()) {
 //    printf("Warp %u: %u\n", getWarpIdInGrid(), getEllapsedTime(start));
-//  }  
+//  }
   uint headerSize = numVars * ELEMENT_WIDTH;
   if (resetWorklistIndex()) {
     __currDiffPtsFreeList__ = CURR_DIFF_PTS_START - headerSize;
@@ -1852,12 +1852,12 @@ __device__ void merge(const uint var1, const uint var2, const uint rep) {
   headIndex = getLoadInvHeadIndex(var2);
   unionG2GRecycling(var1, LOAD_INV, headIndex);
   __graphSet__(headIndex, threadWarpId, NIL);
-  // clear CURR_DIFF_PTS 
+  // clear CURR_DIFF_PTS
   headIndex = getCurrDiffPtsHeadIndex(var2);
   //unionG2GRecycling(var1, CURR_DIFF_PTS, headIndex);
   __graphSet__(headIndex, threadWarpId, NIL);
   setRep(var2, rep);
-  __threadfence(); 
+  __threadfence();
   unlock(var2);
 }
 
@@ -1874,11 +1874,11 @@ __device__ void mergeCycle(const uint* const _list_, const uint _listSize_) {
     return;
   }
   // 'ry' will be the representative of this cycle
-  uint ry = _list_[0];  
+  uint ry = _list_[0];
   if (_listSize_ == 1) {
     if (isFirstWarpOfBlock()) {
       unlock(ry);
-    }    
+    }
     __syncthreads();
     return;
   }
@@ -1898,29 +1898,29 @@ __device__ void mergeCycle(const uint* const _list_, const uint _listSize_) {
   __syncthreads();
   // the first warp merges the local representatives. This is actually faster (and simpler)
   // than performing a reduction of the list using the entire block, due to load imbalance.
-  if (isFirstWarpOfBlock()) { 
+  if (isFirstWarpOfBlock()) {
     uint to = min(_listSize_, warpsPerBlock);
     for (int i = 1; i < to; i++) {
       uint var = _list_[i];
       merge(ry, var, ry);
-    }    
+    }
     //reset CURR_PTS of the cycle representative to be PTS
     uint myBits = __graphGet__(getPtsHeadIndex(ry), threadWarpId);
-    __graphSet__(getCurrDiffPtsHeadIndex(ry), threadWarpId, myBits); 
-    __threadfence();    
+    __graphSet__(getCurrDiffPtsHeadIndex(ry), threadWarpId, myBits);
+    __threadfence();
     unlock(ry);
   }
-  __syncthreads();  
+  __syncthreads();
 }
 
 // to be executed by one thread
 __device__ uint lockVarRep(uint& var) {
   while (1) {
     uint rep = getRepRec(var);
-    uint old = atomicCAS(__lock__ + rep, UNLOCKED, VAR(blockId.x));      
+    uint old = atomicCAS(__lock__ + rep, UNLOCKED, VAR(blockId.x));
     if (old == PTR(blockId.x)) {
         // try to promote lock to type VAR
-      old = atomicCAS(__lock__ + rep, PTR(blockId.x), VAR(blockId.x));            
+      old = atomicCAS(__lock__ + rep, PTR(blockId.x), VAR(blockId.x));
     }
     if (old != UNLOCKED && old != PTR(blockId.x)) {
       var = rep;
@@ -1932,7 +1932,7 @@ __device__ uint lockVarRep(uint& var) {
       return UNLOCKED;
     }
     if (old == PTR(blockId.x)) { // back to PTR
-        __lock__[rep] = PTR(blockId.x);            
+        __lock__[rep] = PTR(blockId.x);
     } else {
       unlock(rep);
     }
@@ -1948,38 +1948,38 @@ __device__ uint lockVarRep(uint& var) {
  * @param _nextVar_ List where to add all the variables we could not lock
  * @param _nextVarSize_ Number of variables we could not lock
  */
-__device__ void lockVars(uint* const _currVar_, uint& _currVarSize_, uint* const _nextVar_, 
+__device__ void lockVars(uint* const _currVar_, uint& _currVarSize_, uint* const _nextVar_,
     uint* _nextVarSize_) {
   __shared__ uint _count_;
   _count_ = 0;
   __syncthreads();
   for (int i = getThreadIdInBlock(); i < _currVarSize_; i+= getThreadsPerBlock()) {
-    uint var = _currVar_[i];  
+    uint var = _currVar_[i];
     // block culling to filter out some duplicates
     if (i && var == _currVar_[i - 1]) {
-      continue;        
+      continue;
     }
     uint stat = lockVarRep(var);
     uint pos;
     if (stat == UNLOCKED) {
       pos = atomicAdd(&_count_, 1);
       _currVar_[pos] = var;
-    } else if (stat != VAR(blockId.x)) { 
+    } else if (stat != VAR(blockId.x)) {
       uint pos = atomicAdd(_nextVarSize_, 1);
-      _nextVar_[pos] = var;        
-    }       
-  }   
-  __syncthreads();  
+      _nextVar_[pos] = var;
+    }
+  }
+  __syncthreads();
   _currVarSize_ = _count_; //first currVarSize positions are populated
-  __syncthreads();  
+  __syncthreads();
 }
 
 // to be executed by one WARP
 __device__ uint lockPtr(uint ptr) {
   __shared__ volatile uint _shared_[MAX_WARPS_PER_BLOCK];
   uint intended = PTR(getBlockIdInGrid());
-  if (isFirstThreadOfWarp()) {    
-    _shared_[warpId] = atomicCAS(__lock__ + ptr, UNLOCKED, intended);      
+  if (isFirstThreadOfWarp()) {
+    _shared_[warpId] = atomicCAS(__lock__ + ptr, UNLOCKED, intended);
   }
   return _shared_[warpId];
 }
@@ -1993,7 +1993,7 @@ __device__ uint lockPtr(uint ptr) {
  * @param _nextVar_ List of variables we could not lock
  * @param _nextVarSize_ Number of variables we could not lock
  */
-__device__ void decodeCurrPts(const uint x, uint* const _currVar_, uint* const _currVarSize_, 
+__device__ void decodeCurrPts(const uint x, uint* const _currVar_, uint* const _currVarSize_,
     uint* const _nextVar_, uint* const _nextVarSize_) {
   uint index = getCurrDiffPtsHeadIndex(x);
   do {
@@ -2013,16 +2013,16 @@ __device__ void decodeCurrPts(const uint x, uint* const _currVar_, uint* const _
       if (var == I2P || !isBitActive(bits, threadWarpId)) {
         var = NIL;
       } else {
-        uint stat = lockVarRep(var);             
+        uint stat = lockVarRep(var);
         if (stat != UNLOCKED) {
-          if (stat != VAR(blockId.x) && var != lastVar) { 
+          if (stat != VAR(blockId.x) && var != lastVar) {
             // TODO: do something so we do not lose equivalences. This only affects Linux, though
-            uint where = atomicInc(_nextVarSize_, HCD_DECODE_VECTOR_SIZE - 1); 
-            _nextVar_[where] = var;              
+            uint where = atomicInc(_nextVarSize_, HCD_DECODE_VECTOR_SIZE - 1);
+            _nextVar_[where] = var;
             lastVar = var;
-          }         
+          }
           var = NIL;
-        }  
+        }
       }
       bits = __ballot(var != NIL);
       if (!bits) {
@@ -2034,40 +2034,40 @@ __device__ void decodeCurrPts(const uint x, uint* const _currVar_, uint* const _
         prevNumFrom = atomicAdd(_currVarSize_, numOnes);
       }
       prevNumFrom = getValAtThread(prevNumFrom, 0);
-      // TODO: make sure that (prevNumFrom + numOnes < HCD_DECODE_VECTOR_SIZE)      
-      //if (isFirstThreadOfWarp() && ((prevNumFrom + numOnes) >= HCD_DECODE_VECTOR_SIZE)) { 
-      //  printf("Exceeded HCD_DECODE_VECTOR_SIZE!!\n"); 
-      //} 
+      // TODO: make sure that (prevNumFrom + numOnes < HCD_DECODE_VECTOR_SIZE)
+      //if (isFirstThreadOfWarp() && ((prevNumFrom + numOnes) >= HCD_DECODE_VECTOR_SIZE)) {
+      //  printf("Exceeded HCD_DECODE_VECTOR_SIZE!!\n");
+      //}
       pos = prevNumFrom + __popc(bits & ((1 << threadWarpId) - 1));
-      if (var != NIL) { 
+      if (var != NIL) {
         _currVar_[pos] = var;
-      }             
+      }
     }
   } while (index != NIL);
 }
 
 /**
  * Lock a list of (pointer) variables and their points-to sets
- * Granularity: block 
+ * Granularity: block
  */
-__device__ void lockPtrs(uint* const _currPtr_, uint& _currPtrSize_, uint* const _nextPtr_, 
-    uint* _nextPtrSize_, uint* const _currVar_, uint* _currVarSize_, uint* const _nextVar_, 
+__device__ void lockPtrs(uint* const _currPtr_, uint& _currPtrSize_, uint* const _nextPtr_,
+    uint* _nextPtrSize_, uint* const _currVar_, uint* _currVarSize_, uint* const _nextVar_,
     uint* _nextVarSize_) {
-  const uint warpsPerBlock = getWarpsPerBlock();  
+  const uint warpsPerBlock = getWarpsPerBlock();
   for (int i = warpId; i < _currPtrSize_; i += warpsPerBlock) {
     uint ptr = _currPtr_[i];
     uint stat = lockPtr(ptr);
-    if (stat != UNLOCKED && stat != VAR(blockId.x)) {       
+    if (stat != UNLOCKED && stat != VAR(blockId.x)) {
       _currPtr_[i] = NIL;
       if (isFirstThreadOfWarp()) {
         uint pos = atomicAdd(_nextPtrSize_, 1);
         _nextPtr_[pos] = ptr;
-      }          
+      }
     } else {
       decodeCurrPts(ptr, _currVar_, _currVarSize_, _nextVar_, _nextVarSize_);
     }
   }
-  __syncthreads();   
+  __syncthreads();
 }
 
 __device__ void unlockPtrs(const uint* const _list_, const uint _listSize_) {
@@ -2085,7 +2085,7 @@ __device__ void unlockPtrs(const uint* const _list_, const uint _listSize_) {
 
 /**
  * Online phase of Hybrid Cycle Detection
- * This is when things get really hairy -- but the overall performance of the algorithm is 
+ * This is when things get really hairy -- but the overall performance of the algorithm is
  * dramatically improved by removing the equivalents discovered during the offline analysis, so
  * there is not way around it AFAIK.
  * The kernel takes a list of tuples (y, x_0, ..., x_N) where pts(*y) = pts(x_0) = ... pts(x_N)
@@ -2095,7 +2095,7 @@ __device__ void unlockPtrs(const uint* const _list_, const uint _listSize_) {
  *   c) merge all the variables that we were able to lock
  *   d) unlock the merged variables
  *   e) repeat a-d for all the variables we were not able to lock
- * Note that e) is not strictly necessary, but we would be missing some (maybe relevant) 
+ * Note that e) is not strictly necessary, but we would be missing some (maybe relevant)
  * equivalences that will eventually result in more work for the standard graph rules.
  */
 __global__ void hcd() {
@@ -2110,7 +2110,7 @@ __global__ void hcd() {
    */
   __shared__ uint *_currPtr_;
   /**
-   * pointer to _ptr_ indicating where the next list starts. 
+   * pointer to _ptr_ indicating where the next list starts.
    * The reason why need of sublists within _ptr_ is because we might not have been able to lock
    * all the variables in _currPtr_, so everything that is pending (=needs to be processed in the
    * next iteration) is placed in the subarray pointed by _nextPtr_
@@ -2124,11 +2124,11 @@ __global__ void hcd() {
    * list of variables that are pointer equivalent but could not be locked in the current iteration
    */
   __shared__ uint *_nextVar_;
-  __shared__ uint _currPtrSize_, _nextPtrSize_, _currVarSize_, _nextVarSize_;    
+  __shared__ uint _currPtrSize_, _nextPtrSize_, _currVarSize_, _nextVarSize_;
   const uint threadIdInBlock = getThreadIdInBlock();
   const uint threadsInBlock = getThreadsPerBlock();
   const uint to = __numHcdIndex__;
-  
+
   // first thread of the block picks next hcd pair to work on
   if (isFirstThreadOfBlock()) {
     _counter_ = atomicAdd(&__worklistIndex0__, 1);
@@ -2142,7 +2142,7 @@ __global__ void hcd() {
     // move the (x0,...,x_N) sublist to shared memory
     for (int i = start + 1 + threadIdInBlock; i < end; i += threadsInBlock) {
       _ptr_[i - start - 1] = __hcdTable__[i];
-    } 
+    }
     if (isFirstWarpOfBlock()) {
       _currPtrSize_ = end - start - 1;
       _currVar_[0] = __hcdTable__[start];
@@ -2152,20 +2152,20 @@ __global__ void hcd() {
       // use a statically fixed index
       _nextPtr_ = _ptr_ + HCD_TABLE_SIZE;
     }
-    while (1) {   
+    while (1) {
       _nextPtrSize_ = 0;
       _nextVarSize_ = 0;
-      __syncthreads();           
+      __syncthreads();
       // lock variables in the current variable list (variables that belong to the points-to set
       // of x_I and could not be locked in a previous iteration)
-      lockVars(_currVar_, _currVarSize_, _nextVar_, &_nextVarSize_);     
+      lockVars(_currVar_, _currVarSize_, _nextVar_, &_nextVarSize_);
       // lock variables in current pointer list, then decode their points-to sets and lock those too
       lockPtrs(_currPtr_, _currPtrSize_, _nextPtr_, &_nextPtrSize_, _currVar_, &_currVarSize_,  _nextVar_, &_nextVarSize_);
       // unlock variables in pointer list if they are not in the variable list
-      unlockPtrs(_currPtr_, _currPtrSize_);                        
+      unlockPtrs(_currPtr_, _currPtrSize_);
       blockSort(_currVar_, _currVarSize_);
       // merge variable list!
-      mergeCycle(_currVar_, _currVarSize_); 
+      mergeCycle(_currVar_, _currVarSize_);
       // if there is any pending work -because variables or pointers could not be locked-, update
       // the corresponding information and retry
       if (!_nextPtrSize_ && (!_nextVarSize_ || (_currVarSize_ + _nextVarSize_ == 1))) {
@@ -2184,14 +2184,14 @@ __global__ void hcd() {
         uint* tmp = _nextPtr_;
         _nextPtr_ = _currPtr_;
         _currPtr_ = tmp;
-      }        
-      __syncthreads(); 
-      blockSort(_currVar_, _currVarSize_);       
+      }
+      __syncthreads();
+      blockSort(_currVar_, _currVarSize_);
     }
     if (isFirstThreadOfBlock()) {
       _counter_ = atomicAdd(&__worklistIndex0__, 1);
     }
-    __syncthreads();    
+    __syncthreads();
   }
   resetWorklistIndex();
 }
@@ -2218,7 +2218,7 @@ __global__ void updateInfo() {
     if (src != NIL) {
       src = getRep(src);
       uint val = (atomicCAS(__lock__ + src, UNLOCKED, LOCKED) == UNLOCKED) ? src : NIL;
-      __storeConstraints__[index] = val;        
+      __storeConstraints__[index] = val;
     }
   }
   syncAllThreads();
@@ -2236,7 +2236,7 @@ __global__ void initialize() {
   uint headerSize = to * ELEMENT_WIDTH;
   if (isFirstThreadOfBlock()) {
     __ptsFreeList__ = headerSize;
-    __currDiffPtsFreeList__ = CURR_DIFF_PTS_START - headerSize;    
+    __currDiffPtsFreeList__ = CURR_DIFF_PTS_START - headerSize;
     __nextDiffPtsFreeList__ = NEXT_DIFF_PTS_START - headerSize;
     // after LOAD_INV, STORE and CURR_DIFF_PTS_INV  header regions
     __otherFreeList__ = COPY_INV_START + headerSize * (LAST_DYNAMIC_REL - COPY_INV + 1);
@@ -2274,7 +2274,7 @@ __global__ void initialize() {
   inc = getThreadsPerGrid();
   // the offline phase of Hybrid Cycle Detection already detected some pointer equivalent variables.
     for (int i = init; i < to; i += inc) {
-    setRep(__initialNonRep__[i], __initialRep__[i]);    
+    setRep(__initialNonRep__[i], __initialRep__[i]);
   }
 }
 
@@ -2295,7 +2295,7 @@ __global__ void computeCurrPtsHash() {
   if (resetWorklistIndex()) {
     __numKeys__ = __numKeysCounter__;
     __numKeysCounter__ = 0;
-  }  
+  }
 }
 
 __global__ void findCurrPtsEquivalents() {
@@ -2328,13 +2328,13 @@ __global__ void findCurrPtsEquivalents() {
       }
     }
     index = getAndIncrement(warpSz);
-  } 
+  }
   resetWorklistIndex();
 }
 
 __host__ void checkKernelErrors(char *msg) {
   cudaError_t e;
-  cudaThreadSynchronize(); 
+  cudaThreadSynchronize();
   if (cudaSuccess != (e = cudaGetLastError())) {
     fprintf(stderr, "\n%s: %s\n", msg, cudaGetErrorString(e));
     exit(-1);
@@ -2377,13 +2377,13 @@ __host__ void printRule(const char* msg) {
 template <typename Vector>
 __host__ void printVector(const Vector& v, uint size) {
   std::cout << "[";
-  for (size_t i = 0; i < size; i++) {    
+  for (size_t i = 0; i < size; i++) {
     uint num =  v[i];
     if (num != NIL) {
       std::cout << num;
       if (i < size - 1) {
         std::cout << ", ";
-      }    
+      }
     }
   }
   std::cout << "]";
@@ -2397,15 +2397,15 @@ __host__ void initializeEdges(const char* constraintsName, const char* constrain
   cudaSafeCall(cudaMemcpyFromSymbol(&numConstraints, constraintNumber, uintSize));
   device_ptr<uint> src(constraints);
   device_vector<uint> dstIndex(numConstraints);
-  sequence(dstIndex.begin(), dstIndex.begin() + numConstraints);    
-  uint numSrc = unique_by_key(src, src + numConstraints, dstIndex.begin()).first - src;    
-  addEdges<<<getBlocks() * 3, dimInitialize>>>(constraints, raw_pointer_cast(&dstIndex[0]), 
-      constraints + numConstraints, numSrc, rel); 
+  sequence(dstIndex.begin(), dstIndex.begin() + numConstraints);
+  uint numSrc = unique_by_key(src, src + numConstraints, dstIndex.begin()).first - src;
+  addEdges<<<getBlocks() * 3, dimInitialize>>>(constraints, raw_pointer_cast(&dstIndex[0]),
+      constraints + numConstraints, numSrc, rel);
   if (rel == STORE) {
-    cudaSafeCall(cudaMemcpyToSymbol("__numStore__", &numSrc, uintSize));    
+    cudaSafeCall(cudaMemcpyToSymbol("__numStore__", &numSrc, uintSize));
   } else {
     cudaFree(constraints);
-  }  
+  }
   checkKernelErrors("ERROR while adding initial edges");
 }
 
@@ -2427,9 +2427,9 @@ extern "C" void createGraph(const uint numObjectVars, const uint maxOffset) {
   createOffsetMasks<<<getBlocks(), dim>>>(numObjectVars, maxOffset);
   checkKernelErrors("ERROR while creating the offset mask");
   uint* size;
-  cudaSafeCall(cudaMemcpyFromSymbol(&size, "__size__", sizeof(uint*)));    
+  cudaSafeCall(cudaMemcpyFromSymbol(&size, "__size__", sizeof(uint*)));
   cudaFree(size);
-  
+
   printf("OK.\n");
   createTime = getEllapsedTime(startTime);
 }
@@ -2449,24 +2449,24 @@ struct mulAdapter : public thrust::unary_function<tuple<uint, uint>, uint>{
 };
 
 __host__ void buildHashMap(device_vector<uint>& key, device_vector<uint>& val,const uint size) {
-  sort_by_key(key.begin(), key.begin() + size, val.begin());    
+  sort_by_key(key.begin(), key.begin() + size, val.begin());
   thrust::maximum<uint> uintMax;
   inclusive_scan(
      make_transform_iterator(
         make_zip_iterator(make_tuple(
           make_transform_iterator(
-              make_zip_iterator(make_tuple(key.begin() + 1, key.begin())), 
-              neqAdapter()), 
-          counting_iterator<uint>(1))), 
+              make_zip_iterator(make_tuple(key.begin() + 1, key.begin())),
+              neqAdapter()),
+          counting_iterator<uint>(1))),
         mulAdapter()),
      make_transform_iterator(
          make_zip_iterator(make_tuple(
              make_transform_iterator(
-                 make_zip_iterator(make_tuple(key.begin() + size, key.begin() + size - 1)), 
-                 neqAdapter()), 
-          counting_iterator<uint>(1))), 
-         mulAdapter()), key.begin() + 1, uintMax);  
-  key[0] = 0;          
+                 make_zip_iterator(make_tuple(key.begin() + size, key.begin() + size - 1)),
+                 neqAdapter()),
+          counting_iterator<uint>(1))),
+         mulAdapter()), key.begin() + 1, uintMax);
+  key[0] = 0;
 }
 
 extern "C" uint andersen(uint numVars) {
@@ -2486,7 +2486,7 @@ extern "C" uint andersen(uint numVars) {
   dim3 dimCopy(WARP_SIZE, getThreadsPerBlock(COPY_INV_THREADS_PER_BLOCK) / WARP_SIZE);
   dim3 dimStore(WARP_SIZE, getThreadsPerBlock(STORE_INV_THREADS_PER_BLOCK) / WARP_SIZE);
   dim3 dimGep(WARP_SIZE, getThreadsPerBlock(GEP_INV_THREADS_PER_BLOCK) / WARP_SIZE);
- 
+
   device_vector<uint> key(MAX_HASH_SIZE);
   uint* ptr = raw_pointer_cast(&key[0]);
   cudaSafeCall(cudaMemcpyToSymbol("__key__", &ptr, sizeof(uint*)));
@@ -2494,20 +2494,20 @@ extern "C" uint andersen(uint numVars) {
   ptr = raw_pointer_cast(&keyAux[0]);
   cudaSafeCall(cudaMemcpyToSymbol("__keyAux__", &ptr, sizeof(uint*)));
   device_vector<uint> val(MAX_HASH_SIZE);
-  ptr = raw_pointer_cast(&val[0]);  
+  ptr = raw_pointer_cast(&val[0]);
   cudaSafeCall(cudaMemcpyToSymbol("__val__", &ptr, sizeof(uint*)));
 
   clock_t ruleTime = clock();
   uint blocks = getBlocks();
   // TODO: mega-hack to avoid race condition on 'gcc' input.
   uint hcdBlocks = getenv("GCC") ? 4 : blocks;
-  
+
   /**
    * TODO (Jan'11)
-   *  
-   * a) use pointers instead of integers for the indexes, which is possible because all the 
+   *
+   * a) use pointers instead of integers for the indexes, which is possible because all the
    * inputs can be analyzed using a 4GB heap. Advantages:
-   *   a.1) when dereferencing an index, currently we assume that in reality is a delta with 
+   *   a.1) when dereferencing an index, currently we assume that in reality is a delta with
    *   respect to __edges__. Because of that, every access to an element becomes *(__edges__ + delta).
    *   If we are using pointers, we could simply do *ptr. Note that __edges__ is in constant memory.
    *   a.2.) we could use the malloc in the CUDA libraries. Malloc could potentially be used in two
@@ -2515,15 +2515,15 @@ extern "C" uint andersen(uint numVars) {
    *   contain the solution so we would restric malloc to allocating copy/load/store edges. Since
    *   malloc returns a pointer, it would be compatible with the index-is-a-pointer system
    *
-   * b) HCD is buggy when many blocks are used. This happens only for the gcc input, so the 
+   * b) HCD is buggy when many blocks are used. This happens only for the gcc input, so the
    * temporal path (see "hcdBlocks" variable) is to set the limit of blocks to four.
-   * 
-   * c) retrieve the amount of memory and use that as HEAP_SIZE. 
-   * 
+   *
+   * c) retrieve the amount of memory and use that as HEAP_SIZE.
+   *
    *  d) devise a better representation scheme st all the benchmarks fit in 3GB, so I can effectively
    *  use an MSI GTX580 (=> much faster than the Tesla C2070 or Quadro 6000) for all the inputs.
-   */  
-  
+   */
+
   while (1) {
     //printf("\n\nIteration: %u\n", iteration);
     printRule("    updating pts...");
@@ -2536,8 +2536,8 @@ extern "C" uint andersen(uint numVars) {
     if (done) {
       break;
     }
-    // Ideally, we would use one stream to copy all the points-to edges discovered during the 
-    // last iteration (resident in the interval [CURR_DIFF_PTS_START, __currDiffPtsFreeList__]) 
+    // Ideally, we would use one stream to copy all the points-to edges discovered during the
+    // last iteration (resident in the interval [CURR_DIFF_PTS_START, __currDiffPtsFreeList__])
     // back to the host while the other stream computes the next iteration, computation that does
     // not modify the CURR_DIFF_PTS set. However, Thrust does not currently support streams, and
     // kernel invocations using the default stream add a implicit synchronization point [CUDA 4.1
@@ -2546,10 +2546,10 @@ extern "C" uint andersen(uint numVars) {
     // the Thrust source code or create your custom Thrust library with the stream hardcoded on it.
     // To avoid going that way, I chose to publish the version of the code that does pay a penalty
     // for the data transfer.
-       
+
     printRule("    hcd...");
     hcd<<<hcdBlocks, dimHcd>>>();
-    checkKernelErrors("ERROR at hcd rule");                    
+    checkKernelErrors("ERROR at hcd rule");
     updateInfo<<<3 * blocks, dim512>>>();
     checkKernelErrors("ERROR while updating information after collapsing");
     printRule("done\n");
@@ -2562,23 +2562,23 @@ extern "C" uint andersen(uint numVars) {
     cudaSafeCall(cudaMemcpyFromSymbol(&numKeys, "__numKeys__", uintSize));
     buildHashMap(key, val, numKeys);
     findCurrPtsEquivalents<<<3 * blocks, dim512>>>();
-    checkKernelErrors("ERROR in finding CURR_PTS equivalents");       
+    checkKernelErrors("ERROR in finding CURR_PTS equivalents");
     printRule("done\n");
     addTimeToRule(ptsEquivTime, ruleTime);
-    
+
     printRule("    copy_inv and load_inv and store2storeInv...");
     copyInv_loadInv_store2storeInv<<<blocks, dimCopy>>>();
-    checkKernelErrors("ERROR at copy_inv/load_inv/store2storeinv rule");        
-  
-    cudaSafeCall(cudaMemcpyFromSymbol(&numKeys, "__numKeys__", uintSize));    
+    checkKernelErrors("ERROR at copy_inv/load_inv/store2storeinv rule");
+
+    cudaSafeCall(cudaMemcpyFromSymbol(&numKeys, "__numKeys__", uintSize));
     assert(numKeys <= MAX_HASH_SIZE);
     sort_by_key(key.begin(), key.begin() + numKeys, val.begin());
-    sequence(keyAux.begin(), keyAux.begin() + numKeys);    
-    numKeys = unique_by_key(key.begin(), key.begin() + numKeys, keyAux.begin()).first - key.begin();    
-    cudaSafeCall(cudaMemcpyToSymbol("__numKeys__", &numKeys, uintSize));   
+    sequence(keyAux.begin(), keyAux.begin() + numKeys);
+    numKeys = unique_by_key(key.begin(), key.begin() + numKeys, keyAux.begin()).first - key.begin();
+    cudaSafeCall(cudaMemcpyToSymbol("__numKeys__", &numKeys, uintSize));
     printRule("done\n");
     addTimeToRule(copyInvTime, ruleTime);
-    
+
     printRule("    store_inv...");
     storeInv<<<blocks, dimStore>>>();
     checkKernelErrors("ERROR at store_inv rule");
@@ -2596,7 +2596,7 @@ extern "C" uint andersen(uint numVars) {
   }
   printf("OK.\n");
   // store the last index for the PTS elements
-  uint ptsEndIndex;  
+  uint ptsEndIndex;
   cudaSafeCall(cudaMemcpyFromSymbol(&ptsEndIndex, "__ptsFreeList__", uintSize));
   uint solveTime = getEllapsedTime(startTime);
   printf("SOLVE runtime: %u ms.\n", createTime + solveTime);

@@ -31,8 +31,8 @@
 #include "gzstream.h"
 
 using namespace std;
-    
-// check that the obtained solution is a subset of the desired solution. Useful when trying to 
+
+// check that the obtained solution is a subset of the desired solution. Useful when trying to
 // detect bugs (for instance, detected the 1st iteration such that the inclusion does not hold)
 #define USE_INCLUSION (2)
 
@@ -40,10 +40,10 @@ static uint transferH2dTime = 0;
 static uint transferD2hTime = 0;
 
 static void printDeviceMemory() {
-  uint uCurAvailMemoryInBytes, uTotalMemoryInBytes;
+  size_t uCurAvailMemoryInBytes, uTotalMemoryInBytes;
   cudaMemGetInfo( &uCurAvailMemoryInBytes, &uTotalMemoryInBytes );
   //cout << "[host] GPU's total memory: "<< B2MB(uTotalMemoryInBytes) << " MB, free Memory: "
-  //        << B2MB(uCurAvailMemoryInBytes) << " MB" << endl;    
+  //        << B2MB(uCurAvailMemoryInBytes) << " MB" << endl;
   //if (B2MB(uCurAvailMemoryInBytes) < 3930) {
   //    cout << "Warning: there is not enough memory in your GPU to analyze all inputs." << endl;
   //}
@@ -103,7 +103,7 @@ void checkGPUConfiguration() {
   }
   // Make printf buffer bigger, otherwise some printf messages are not displayed
   size_t limit;
-  cudaThreadGetLimit(&limit, cudaLimitPrintfFifoSize); 
+  cudaThreadGetLimit(&limit, cudaLimitPrintfFifoSize);
   cudaThreadSetLimit(cudaLimitPrintfFifoSize, limit * 16);
   // Make stack bigger, otherwise recursive functions will fail silently (?)
   //cudaThreadGetLimit(&limit, cudaLimitStackSize);
@@ -117,7 +117,7 @@ uint nextUint(istringstream& lineStream) {
 }
 
 string skipBlanksAndComments(igzstream& inFile){
-  string line;  
+  string line;
   for (;;) {
     getline(inFile, line);
     if (!line.empty() && line[0] != '#') {
@@ -147,7 +147,7 @@ uint readNodes(char *fileName, uint& numVars, uint& numObjectVars) {
   line = skipBlanksAndComments(inFile);
   istringstream linestream2(line);
   // for some reason, the number stored is lastObjectVar
-  numObjectVars = nextUint(linestream2) + 1; 
+  numObjectVars = nextUint(linestream2) + 1;
   // cout << "    object variables: " << numObjectVars << endl;
   skipBlanksAndComments(inFile); // skip lastFunctionNode
   uint length = roundToNextMultipleOf(numObjectVars, 32);
@@ -159,7 +159,7 @@ uint readNodes(char *fileName, uint& numVars, uint& numObjectVars) {
     nextUint(linestream);  // ignore var ID
     size[i] = nextUint(linestream);
     nextUint(linestream);// ignore functionNode crap
-  } 
+  }
   inFile.close();
   for (uint i = numObjectVars; i < length; i++) {
     size[i] = 0;
@@ -194,14 +194,14 @@ uint* readConstraints(igzstream &inFile, uint rows) {
     uint src = nextUint(linestream);
     uint dst = nextUint(linestream);
     nextUint(linestream); // ignore type
-    uint offset = nextUint(linestream); 
+    uint offset = nextUint(linestream);
     if (offset) {
       cerr << "Detected constraint with offset" << endl << flush;
       exit(-1);
     }
     constraints[i] = dst;
     constraints[i + length] = src;
-  }  
+  }
   // pad with NILs
   for (uint i = rows; i < length; i++) {
     constraints[i] = NIL;
@@ -210,7 +210,7 @@ uint* readConstraints(igzstream &inFile, uint rows) {
   return constraints;
 }
 
-void readAndTransferConstraints(igzstream &inFile, uint numConstraints, const char* constraintsName, 
+void readAndTransferConstraints(igzstream &inFile, uint numConstraints, const char* constraintsName,
     const char* numConstraintsName) {
   uint* constraints = readConstraints(inFile, numConstraints);
   const uint startTime = clock();
@@ -246,12 +246,12 @@ void readAndTransferGepConstraints(igzstream &inFile, uint numConstraints, uint&
     }
     constraints[i * 2] = dst;
     constraints[i * 2 + 1] = idOffset(src, offset);
-  } 
+  }
   // pad with NILs
   for (uint i = numConstraints * 2; i < length; i++) {
     constraints[i] = NIL;
   }
-  
+
   const uint startTime = clock();
   uint* formattedConstraintsLocal;
   cudaSafeCall(cudaMalloc((void **) &formattedConstraintsLocal, length * uintSize));
@@ -272,7 +272,7 @@ void readConstraints(char *fileName, uint numVars, uint& maxOffset) {
   }
   string line = skipBlanksAndComments(inFile);
   istringstream linestream(line);
-  uint numAddressOf = nextUint(linestream); 
+  uint numAddressOf = nextUint(linestream);
   uint numCopy = nextUint(linestream);
   uint numLoad = nextUint(linestream);
   uint numStore = nextUint(linestream);
@@ -375,10 +375,10 @@ void readHcdInfo(char *fileName) {
 uint* allocateElementPool() {
   const uint startTime = clock();
   uint* elementPoolLocal;
-  
+
   size_t size =  HEAP_SIZE * sizeof(uint);
   cudaSafeCall(cudaMalloc((void **) &elementPoolLocal, size));
-  // elements are initialized on the GPU, so we only transfer the pointers 
+  // elements are initialized on the GPU, so we only transfer the pointers
   cudaSafeCall(cudaMemcpyToSymbol("__graph__", &elementPoolLocal, sizeof(uint*)));
   cudaSafeCall(cudaMemcpyToSymbol("__edges__", &elementPoolLocal, sizeof(uint*)));
   transferH2dTime += getEllapsedTime(startTime);
@@ -400,7 +400,7 @@ uint* allocateOther(uint numVars) {
 }
 
 void allocateDiffPtsMask(uint numVars) {
-  int* maskLocal; 
+  int* maskLocal;
   int rows = ceil((float) numVars /  (float) ELEMENT_CARDINALITY);
   size_t size =  rows * ELEMENT_WIDTH * sizeof(uint);
   cudaSafeCall(cudaMalloc((void **) &maskLocal, size));
@@ -471,7 +471,7 @@ void verifySolution(bool useInclusion, uint* ptsEdges, uint ptsSize, uint* rep, 
   for (uint i = 0; i < vars.size(); i++) {
     uint var = vars[i];
     vector<uint> ptsVar;
-    uint representative = rep[var];   
+    uint representative = rep[var];
     if (representative != var) {
       // non-representative: simply make sure that the representative is included in 'vars'
       if (find(vars.begin(), vars.end(), representative) == vars.end()) {
@@ -481,12 +481,12 @@ void verifySolution(bool useInclusion, uint* ptsEdges, uint ptsSize, uint* rep, 
        printVector(ptsVar);
        cerr << endl;
        printVector(sol);
-       cerr << endl;      
+       cerr << endl;
        exit(-1);
       }
     } else {
       getPts(representative, ptsEdges, ptsSize, ptsVar);
-      bool OK = useInclusion ? includes(sol.begin(), sol.end(), ptsVar.begin(), ptsVar.end()) : 
+      bool OK = useInclusion ? includes(sol.begin(), sol.end(), ptsVar.begin(), ptsVar.end()) :
         (ptsVar == sol);
       if (!OK) {
         cerr << "Error at representative " << var << ": the obtained pts (1st line) "
@@ -494,7 +494,7 @@ void verifySolution(bool useInclusion, uint* ptsEdges, uint ptsSize, uint* rep, 
        printVector(ptsVar);
        cerr << endl;
        printVector(sol);
-       cerr << endl;      
+       cerr << endl;
        exit(-1);
       }
     }
@@ -514,7 +514,7 @@ void verifySolution(uint verify, uint* ptsEdges, uint ptsSize, uint* rep, char* 
     cerr << "[host] WARNING: verification uses inclusion." << endl << flush;
   }
   cerr << "[host] Verifying against " << solFile << "..." << flush;
-  string line;  
+  string line;
   getline(inFile, line); // skip first line
   while (getline(inFile, line)) {
     size_t pos = line.find("] => [");
@@ -523,7 +523,7 @@ void verifySolution(uint verify, uint* ptsEdges, uint ptsSize, uint* rep, char* 
     convertCsvIntoVector(lhs, vars);
     string rhs = line.substr(pos + 6);
     rhs = rhs.substr(0, rhs.size() - 1);
-    vector<uint> sol;   
+    vector<uint> sol;
     convertCsvIntoVector(rhs, sol);
     verifySolution(verify == USE_INCLUSION, ptsEdges, ptsSize, rep, vars, sol);
   }
@@ -550,7 +550,7 @@ void transferBackInfo(uint verify, uint numVars, uint* edgesD, uint ptsSize, uin
   uint* ptsEdges = NULL;
   cudaSafeCall(cudaHostAlloc((void**) &ptsEdges, ptsSize * uintSize, 0));
   cudaSafeCall(cudaMemcpy(ptsEdges, edgesD, ptsSize * uintSize, D2H));
-  uint* rep = NULL; 
+  uint* rep = NULL;
   cudaSafeCall(cudaHostAlloc((void**) &rep, numVars * uintSize, 0));
   cudaSafeCall(cudaMemcpy(rep, repD, numVars * uintSize, D2H));
   //printSolution(numVars, ptsEdges, ptsSize);
@@ -564,7 +564,7 @@ void transferBackInfo(uint verify, uint numVars, uint* edgesD, uint ptsSize, uin
   cudaSafeCall(cudaFreeHost(rep));
 }
 
-int main(int argc, char** argv) {  
+int main(int argc, char** argv) {
   if ((argc < 5) || (argc > 7)) {
     cerr << "Usage : andersen NODES_FILE CONSTRAINTS_FILE HCD_TABLE SOLUTION_FILE [TRANSFER, VERIFY]" << endl;
     exit(-1);
@@ -578,7 +578,7 @@ int main(int argc, char** argv) {
     verify = atoi(argv[6]);
   }
   checkGPUConfiguration();
-  uint maxOffset = 0; 
+  uint maxOffset = 0;
   uint numVars, numObjectVars;
   string input(argv[1]);
   size_t start = input.find_last_of('/') + 1;
@@ -587,7 +587,7 @@ int main(int argc, char** argv) {
 #ifdef __LP64__
   cout << "[host] 64-bit detected." << endl << flush;
 #endif
-  readNodes(argv[1], numVars, numObjectVars);   
+  readNodes(argv[1], numVars, numObjectVars);
   readConstraints(argv[2], numVars, maxOffset);
   readHcdInfo(argv[3]);
   uint* edgesD = allocateElementPool();

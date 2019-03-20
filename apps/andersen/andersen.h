@@ -98,11 +98,11 @@ typedef unsigned long int ulongint;
 // Size of the region dedicated to copy/load/store edges
 #define OTHER_REGION_SIZE_MB ((uint) (HEAP_SIZE_MBf * 0.1475))
 // sizes are given in 32-bit words
-#define HEAP_SIZE (HEAP_SIZE_MB * 1024 * 256) 
+#define HEAP_SIZE (HEAP_SIZE_MB * 1024 * 256)
 #define MAX_HASH_SIZE (1 << 20)
-#define COPY_INV_START (HEAP_SIZE - OTHER_REGION_SIZE_MB * 1024 * 256)  // COPY region  
+#define COPY_INV_START (HEAP_SIZE - OTHER_REGION_SIZE_MB * 1024 * 256)  // COPY region
 #define CURR_DIFF_PTS_START (COPY_INV_START - ELEMENT_WIDTH)
-#define NEXT_DIFF_PTS_START (CURR_DIFF_PTS_START - CURR__DIFF_PTS_REGION_SIZE_MB * 1024 * 256 - ELEMENT_WIDTH)     
+#define NEXT_DIFF_PTS_START (CURR_DIFF_PTS_START - CURR__DIFF_PTS_REGION_SIZE_MB * 1024 * 256 - ELEMENT_WIDTH)
 
 // profiling variables. No need to set them up for your system unless your are timing device
 // invocations
@@ -150,7 +150,7 @@ typedef unsigned long int ulongint;
 #define UNLOCKED (UINT_MAX)
 #define LOCKED (UINT_MAX - 1)
 #define VAR(x) (((x) + (UINT_MAX >> 1)))
-#define PTR(x) ((x)) 
+#define PTR(x) ((x))
 
 #define cudaSafeCall(err) { \
   if (cudaSuccess != err) { \
@@ -172,13 +172,13 @@ extern "C" uint andersen(uint numVars);
    }
   cudaDeviceProp deviceProp;
   cudaGetDeviceProperties(&deviceProp, 0);
-  return deviceProp.multiProcessorCount;	
+  return deviceProp.multiProcessorCount;
 }
 
  __host__ inline uint getThreadsPerBlock(uint intended) {
      return DEBUG ? WARP_SIZE : intended;
  }
- 
+
 //////////// utility functions used in both the CPU and GPU /////////
 
 __device__ __host__ inline const char* getName(uint rel) {
